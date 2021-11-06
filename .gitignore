@@ -1,0 +1,7 @@
+data-src
+data-bin
+**/__pycache__/
+checkpoints/
+logs/
+log*.txt
+.vscode/
