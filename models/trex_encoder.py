@@ -63,8 +63,9 @@ class TrexEncoder(FairseqEncoder):
         embed_mem = kwargs.pop("embed_mem", None)
         if embed_mem is not None:
             self.embed_mem = embed_mem
-    
-        self.mem_combine = ByteCombineCNN(embed_dim, embed_dim)
+            self.mem_combine = ByteCombineCNN(embed_dim, embed_dim)
+        else:
+            self.mem_combine = None
 
         if self.args.input_combine == 'cnn':
             self.byte_combine = ByteCombineCNN(embed_dim, embed_dim)
@@ -126,11 +127,12 @@ class TrexEncoder(FairseqEncoder):
             token_embedding += self.embed_tokens[field](src_tokens[field])
         
         # embed memref data
-        mem_embedding_stack = []
-        for field in configs.mem_fields:
-            mem_embedding_stack.append(self.embed_mem(src_tokens[field]))
-        mem_embedding = self.mem_combine(torch.stack(mem_embedding_stack, dim=2))
-        token_embedding =  self.embed_scale * (token_embedding + mem_embedding)
+        if self.mem_combine:
+            mem_embedding_stack = []
+            for field in configs.mem_fields:
+                mem_embedding_stack.append(self.embed_mem(src_tokens[field]))
+            mem_embedding = self.mem_combine(torch.stack(mem_embedding_stack, dim=2))
+            token_embedding =  self.embed_scale * (token_embedding + mem_embedding)
 
         if self.byte_combine is not None:
             byte_embedding_stack = []

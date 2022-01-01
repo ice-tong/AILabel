@@ -3,13 +3,13 @@ static_field_label = 'ail_token_label'
 var_label_field = 'var_label'
 inst_pos_field = 'stmt_idxs'  # instruction positional embedding
 op_pos_field = 'op_idxs'  # opcode/operand positional embedding
-byte_fields = [f'value_token_{i}' for i in range(8)]
-mem_fields = [f'mem_token_{i}' for i in range(8)]
+byte_fields = [f'mem_token_{i}' for i in range(8)]
+# mem_fields = [f'mem_token_{i}' for i in range(8)]
 
 maskable_fields = [static_field] + byte_fields
 aux_fields = [inst_pos_field] + [op_pos_field]
 non_byte_fields = [static_field] + [inst_pos_field] + [op_pos_field]
-fields = non_byte_fields + byte_fields + mem_fields
+fields = non_byte_fields + byte_fields# + mem_fields
 
 byte_len = 8
 full_attn = False

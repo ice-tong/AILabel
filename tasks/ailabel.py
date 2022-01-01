@@ -163,14 +163,17 @@ class AILabelTask(LegacyFairseqTask):
 
         paths = os.listdir(args.data)
         assert len(paths) > 0
-        if len(paths) != len(configs.fields + [configs.static_field_label, configs.var_label_field]):
-            print('ERROR: invalid paths:', paths)
+        if len(paths) != len(configs.fields + [configs.static_field_label]):
+            print('ERROR: invalid paths:', sorted(paths))
+            print(sorted(configs.fields + [configs.static_field_label]))
             raise ValueError()
 
         dictionary_dict = {}
-        for field in configs.fields + [configs.static_field_label, configs.var_label_field]:
+        for field in configs.fields + [configs.static_field_label]:
             dictionary_dict[field] = Dictionary.load(os.path.join(args.data, field, "dict.txt"))
             logger.info(f"{field} dictionary: {len(dictionary_dict[field])} types")
+        dictionary_dict[configs.var_label_field] = Dictionary.load(
+            os.path.join('data-bin/ailabel_dicts_300k', configs.var_label_field, "dict.txt"))
         return cls(args, dictionary_dict)
 
     def load_dataset(self, split, epoch=1, combine=False, **kwargs):
@@ -234,16 +237,19 @@ class AILabelTask(LegacyFairseqTask):
         # load multi-label data
         var_label_fpath = os.path.join(self.args.data_src, split+"."+configs.var_label_field)
         label_vocab = self.source_dictionary[configs.var_label_field]
-        
-        label_datasets = []
-        with open(var_label_fpath) as f:
-            for idx, line in enumerate(f):
+    
+        class MultiLabelDataset(torch.utils.data.Dataset):
+
+            def __init__(self, label_fpath):
+                super().__init__()
+                self.f = open(var_label_fpath)
+                self._len = len(self.f.readlines())
+                self.f.seek(0)
+            
+            def __getitem__(self, idx):
+                line = self.f.readlines()[idx]
                 line = line.replace("\n", "")
-                # x = src_tokens[configs.static_field][idx]
-                # onehot_labels = torch.zeros(x.shape[0], len(label_vocab))
                 onehot_labels = []
-                # col_indexs = torch.where(x)[0]
-                # for label, col_idx in zip(line.split(" "), col_indexs):
                 for label in line.split(" "):
                     onehot_label = [0] * len(label_vocab)
                     for l in label.split("|"):
@@ -252,12 +258,32 @@ class AILabelTask(LegacyFairseqTask):
                         if l not in label_vocab.indices:
                             continue
                         onehot_label[label_vocab.indices[l]] = 1
-                    #     onehot_labels[col_idx][label_vocab.indices[l]] = 1
-                    # onehot_labels[col_idx] = torch.Tensor(onehot_label)
                     onehot_labels.append(onehot_label)
                 onehot_labels = torch.Tensor(onehot_labels)
+                self.f.seek(0)
+                return onehot_labels
+            
+            def __len__(self):
+                return self._len
 
-                label_datasets.append(onehot_labels)
+        
+        # label_datasets = []
+        # with open(var_label_fpath) as f:
+        #     for idx, line in enumerate(f):
+        #         line = line.replace("\n", "")
+        #         onehot_labels = []
+        #         for label in line.split(" "):
+        #             onehot_label = [0] * len(label_vocab)
+        #             for l in label.split("|"):
+        #                 if not l.strip():
+        #                     continue
+        #                 if l not in label_vocab.indices:
+        #                     continue
+        #                 onehot_label[label_vocab.indices[l]] = 1
+        #             onehot_labels.append(onehot_label)
+        #         onehot_labels = torch.Tensor(onehot_labels)
+
+        #         label_datasets.append(onehot_labels)
         
         class MLPadDataset(RightPadDataset):
             def collater(self, samples):
@@ -265,7 +291,7 @@ class AILabelTask(LegacyFairseqTask):
             ...
 
         tgt_tokens[configs.static_field_label] = MLPadDataset(
-            label_datasets, 0)
+            MultiLabelDataset(var_label_fpath), 0)
 
         with data_utils.numpy_seed(self.args.seed):
             shuffle = np.random.permutation(len(dataset))

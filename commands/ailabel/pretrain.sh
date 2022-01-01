@@ -11,15 +11,15 @@ WARMUP_UPDATES=10000  # Warmup the learning rate over this many updates
 PEAK_LR=1e-2          # Peak learning rate, adjust as needed, official suggested: 1e-4
 TOKENS_PER_SAMPLE=512 # Max sequence length
 MAX_POSITIONS=512     # Num. positional embeddings (usually same as above)
-MAX_SENTENCES=48      # Number of sequences per batch (batch size)
+MAX_SENTENCES=12      # Number of sequences per batch (batch size)
 UPDATE_FREQ=8         # Increase the batch size 32x
 ENCODER_EMB_DIM=768
-ENCODER_LAYERS=1
-ENCODER_ATTENTION_HEADS=2
+ENCODER_LAYERS=4
+ENCODER_ATTENTION_HEADS=8      
 
-CUDA_VISIBLE_DEVICES=0,1 python train.py \
+CUDA_VISIBLE_DEVICES=0 python train.py \
   data-bin/ailabel \
-  data-src/ailabel_150k \
+  data-src/ailabel_300k \
   --task ailabel --criterion ailabel \
   --arch ailabel --sample-break-mode eos --tokens-per-sample $TOKENS_PER_SAMPLE \
   --optimizer adam --adam-betas '(0.9,0.98)' --adam-eps 1e-6 --clip-norm 0.0 \
@@ -31,7 +31,8 @@ CUDA_VISIBLE_DEVICES=0,1 python train.py \
   --encoder-layers $ENCODER_LAYERS --encoder-embed-dim $ENCODER_EMB_DIM --encoder-attention-heads $ENCODER_ATTENTION_HEADS \
   --random-token-prob 0.2 --mask-prob 0.2 \
   --memory-efficient-fp16 \
-  --batch-size-valid 128 \
+  --dataset-impl=lazy --num-workers=0 --distributed-no-spawn\
+  --batch-size-valid 24 \
   --skip-invalid-size-inputs-valid-test \
   --ddp-backend=no_c10d \
   --restore-file $AILable_PATH/checkpoint_best.pt |

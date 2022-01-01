@@ -11,6 +11,7 @@ import torch.nn.functional as F
 from fairseq import metrics, modules, utils
 from command import configs
 from fairseq.criterions import FairseqCriterion, register_criterion
+from fairseq.trainer import DropSample
 import random
 from sklearn.metrics import average_precision_score
 
@@ -79,7 +80,8 @@ class AILabelLoss(FairseqCriterion):
             configs.static_field].indices["<mask>"]
         masked_code = ail_token.eq(mask_idx)
         if not masked_code.any():
-            return self.last_result
+            print('drop sampe ')
+            raise DropSample()
         # if not masked_code.any():
         #     logging_output = {
         #         "loss": 0,

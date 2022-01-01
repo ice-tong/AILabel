@@ -479,8 +479,9 @@ class Encoder(FairseqEncoder):
 
         embed_bytes = self.build_embedding(len(dictionary[configs.byte_fields[2]]), args.encoder_embed_dim,
                                            dictionary[configs.byte_fields[0]].pad())
-        embed_mem = self.build_embedding(len(dictionary[configs.mem_fields[2]]), args.encoder_embed_dim,
-                                           dictionary[configs.mem_fields[0]].pad())
+        # embed_mem = self.build_embedding(len(dictionary[configs.mem_fields[2]]), args.encoder_embed_dim,
+        #                                    dictionary[configs.mem_fields[0]].pad())
+        embed_mem = None
 
         self.sentence_encoder = self.build_encoder(args, dictionary, embed_tokens, embed_bytes, embed_mem=embed_mem)
 
